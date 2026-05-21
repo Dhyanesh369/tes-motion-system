@@ -1,48 +1,73 @@
 "use client";
 
-import { motion, HTMLMotionProps } from "framer-motion";
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-interface FadeInProps extends HTMLMotionProps<"div"> {
+gsap.registerPlugin(ScrollTrigger);
+
+interface FadeInProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   delay?: number;
   direction?: "up" | "down" | "left" | "right" | "none";
+  duration?: number;
 }
 
-export const FadeIn = ({ 
-  children, 
-  delay = 0, 
+export const FadeIn = ({
+  children,
+  delay = 0,
   direction = "none",
-  ...props 
+  duration = 0.8,
+  className,
+  ...props
 }: FadeInProps) => {
-  const directions = {
-    up: { y: 20, x: 0 },
-    down: { y: -20, x: 0 },
-    left: { x: 20, y: 0 },
-    right: { x: -20, y: 0 },
-    none: { x: 0, y: 0 },
-  };
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+
+    const directions = {
+      up: { y: 40, x: 0 },
+      down: { y: -40, x: 0 },
+      left: { x: 40, y: 0 },
+      right: { x: -40, y: 0 },
+      none: { x: 0, y: 0 },
+    };
+
+    const dir = directions[direction];
+
+    gsap.fromTo(
+      ref.current,
+      {
+        opacity: 0,
+        x: dir.x,
+        y: dir.y,
+      },
+      {
+        opacity: 1,
+        x: 0,
+        y: 0,
+        duration,
+        delay,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: ref.current,
+          start: "top 85%",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+
+    return () => {
+      ScrollTrigger.getAll().forEach((t) => {
+        if (t.vars.trigger === ref.current) t.kill();
+      });
+    };
+  }, [direction, delay, duration]);
 
   return (
-    <motion.div
-      initial={{ 
-        opacity: 0, 
-        ...directions[direction] 
-      }}
-      whileInView={{ 
-        opacity: 1, 
-        x: 0, 
-        y: 0 
-      }}
-      viewport={{ once: true }}
-      transition={{
-        duration: 0.5,
-        delay: delay,
-        ease: "easeOut",
-      }}
-      {...props}
-    >
+    <div ref={ref} className={className} {...props}>
       {children}
-    </motion.div>
+    </div>
   );
 };

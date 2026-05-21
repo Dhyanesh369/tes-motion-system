@@ -1,49 +1,85 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { motion, useInView, useAnimation } from "framer-motion";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-interface RevealProps {
+gsap.registerPlugin(ScrollTrigger);
+
+interface RevealProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   width?: "fit-content" | "100%";
   delay?: number;
+  duration?: number;
+  color?: string;
 }
 
-export const Reveal = ({ children, width = "fit-content", delay = 0.25 }: RevealProps) => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
-  const mainControls = useAnimation();
-  const slideControls = useAnimation();
+export const Reveal = ({ 
+  children, 
+  width = "fit-content", 
+  delay = 0.25, 
+  duration = 0.6,
+  color = "var(--primary, #ffffff)",
+  className,
+  ...props
+}: RevealProps) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const slideRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isInView) {
-      mainControls.start("visible");
-      slideControls.start("visible");
-    }
-  }, [isInView, mainControls, slideControls]);
+    if (!ref.current || !slideRef.current || !contentRef.current) return;
+
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: ref.current,
+        start: "top 80%",
+        toggleActions: "play none none none",
+      },
+    });
+
+    // Content reveal setup
+    gsap.set(contentRef.current, { opacity: 0, y: 75 });
+    
+    // Slide cover animation
+    tl.fromTo(
+      slideRef.current,
+      { left: 0, right: "100%" },
+      { right: 0, duration: duration, ease: "power3.inOut", delay }
+    )
+    .to(
+      slideRef.current,
+      { left: "100%", duration: duration, ease: "power3.inOut" }
+    )
+    // Content animation
+    .to(
+      contentRef.current,
+      { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" },
+      `-=${duration}`
+    );
+
+    return () => {
+      tl.kill();
+      ScrollTrigger.getAll().forEach((t) => {
+        if (t.vars.trigger === ref.current) t.kill();
+      });
+    };
+  }, [delay, duration]);
 
   return (
-    <div ref={ref} style={{ position: "relative", width, overflow: "hidden" }}>
-      <motion.div
-        variants={{
-          hidden: { opacity: 0, y: 75 },
-          visible: { opacity: 1, y: 0 },
-        }}
-        initial="hidden"
-        animate={mainControls}
-        transition={{ duration: 0.5, delay }}
-      >
+    <div 
+      ref={ref} 
+      style={{ position: "relative", width, overflow: "hidden" }} 
+      className={className} 
+      {...props}
+    >
+      <div ref={contentRef}>
         {children}
-      </motion.div>
-      <motion.div
-        variants={{
-          hidden: { left: 0 },
-          visible: { left: "100%" },
-        }}
-        initial="hidden"
-        animate={slideControls}
-        transition={{ duration: 0.5, ease: "easeIn" }}
-        className="absolute bottom-1 left-0 right-0 top-1 z-20 bg-primary"
+      </div>
+      <div
+        ref={slideRef}
+        className="absolute bottom-1 top-1 z-20"
+        style={{ backgroundColor: color }}
       />
     </div>
   );

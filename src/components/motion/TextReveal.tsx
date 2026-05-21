@@ -22,10 +22,11 @@ export function TextReveal({
   ...config
 }: TextRevealProps) {
   const { ref } = useTextReveal({ preset, once, threshold, ...config })
+  const Component = Tag as any
   return (
-    <Tag ref={ref} className={className}>
+    <Component ref={ref} className={className}>
       {children}
-    </Tag>
+    </Component>
   )
 }
 
